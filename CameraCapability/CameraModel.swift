@@ -62,6 +62,8 @@ final class CameraModel {
     private(set) var position: CameraPosition = .back
     private(set) var currentDevice: AVCaptureDevice?
     private(set) var isConfiguring = false
+    /// Whether the session is running. Device info is read without opening the camera, so this starts off.
+    private(set) var isCameraOpen = false
     private(set) var isCapturing = false
     private(set) var zoomFactor: CGFloat = 1
     private(set) var statusMessage: String?
@@ -101,8 +103,28 @@ final class CameraModel {
         }
 
         await switchTo(initial)
-        await service.startRunning()
         startLiveUpdates()
+    }
+
+    func setCameraOpen(_ open: Bool) async {
+        guard open != isCameraOpen, !isConfiguring, let currentDevice else { return }
+        isConfiguring = true
+        defer { isConfiguring = false }
+
+        if open {
+            do {
+                try await service.configure(with: currentDevice)
+                await service.startRunning()
+                isCameraOpen = true
+                // The preview connection only exists once an input is added, so reapply rotation.
+                setUpRotationCoordinator(for: currentDevice)
+            } catch {
+                showStatus("Failed to open \(currentDevice.localizedName): \(error.localizedDescription)")
+            }
+        } else {
+            await service.stop()
+            isCameraOpen = false
+        }
     }
 
     func attach(previewLayer: AVCaptureVideoPreviewLayer) {
@@ -145,7 +167,9 @@ final class CameraModel {
         defer { isConfiguring = false }
 
         do {
-            try await service.configure(with: device)
+            if isCameraOpen {
+                try await service.configure(with: device)
+            }
             currentDevice = device
             zoomFactor = device.videoZoomFactor
             setUpRotationCoordinator(for: device)
@@ -179,7 +203,7 @@ final class CameraModel {
     // MARK: - Capture
 
     func capturePhoto() async {
-        guard currentDevice != nil, !isCapturing else { return }
+        guard currentDevice != nil, isCameraOpen, !isCapturing else { return }
         isCapturing = true
         defer { isCapturing = false }
 

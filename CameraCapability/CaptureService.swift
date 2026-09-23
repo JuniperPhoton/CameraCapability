@@ -45,6 +45,22 @@ nonisolated final class CaptureService: @unchecked Sendable {
         }
     }
 
+    /// Stops the session and removes the device input so the camera is fully released.
+    func stop() async {
+        await withCheckedContinuation { continuation in
+            queue.async { [self] in
+                if session.isRunning { session.stopRunning() }
+                if let currentInput {
+                    session.beginConfiguration()
+                    session.removeInput(currentInput)
+                    session.commitConfiguration()
+                    self.currentInput = nil
+                }
+                continuation.resume()
+            }
+        }
+    }
+
     func capturePhoto(rotationAngle: CGFloat) async throws -> Data {
         try await withCheckedThrowingContinuation { continuation in
             queue.async { [self] in

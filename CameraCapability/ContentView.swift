@@ -9,6 +9,12 @@ struct ContentView: View {
             ZStack {
                 CameraPreview(model: model)
 
+                if !model.isCameraOpen {
+                    Label("Camera closed", systemImage: "video.slash")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
                 if let message = model.statusMessage {
                     Text(message)
                         .font(.footnote.weight(.medium))
@@ -23,7 +29,7 @@ struct ContentView: View {
                 CaptureButton(isCapturing: model.isCapturing) {
                     Task { await model.capturePhoto() }
                 }
-                .disabled(model.currentDevice == nil)
+                .disabled(model.currentDevice == nil || !model.isCameraOpen)
                 .frame(maxHeight: .infinity, alignment: .bottom)
                 .padding(.bottom, 12)
             }
@@ -87,6 +93,13 @@ private struct CameraSelector: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Toggle("Open camera", isOn: Binding(
+                get: { model.isCameraOpen },
+                set: { open in Task { await model.setCameraOpen(open) } }
+            ))
+            .font(.subheadline.weight(.medium))
+            .disabled(model.currentDevice == nil || model.isConfiguring)
+
             Picker("Position", selection: Binding(get: { model.position }, set: { model.select(position: $0) })) {
                 ForEach(CameraPosition.allCases) { position in
                     Text(position.rawValue).tag(position)

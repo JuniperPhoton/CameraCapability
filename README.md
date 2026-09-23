@@ -18,6 +18,7 @@ Pick a built-in camera type, see the live preview, and inspect what that device 
   - External
 
   Types that don't exist on the device for the selected position are greyed out and struck through. The selector stays pinned while the info panel scrolls.
+- **Open camera toggle.** Off by default. Device and format info is read straight from `AVCaptureDevice`, so browsing devices doesn't start the session. Turn it on for the preview, live values and photo capture.
 - **Preview.** An `AVCaptureVideoPreviewLayer` shows the full frame without cropping. `AVCaptureDevice.RotationCoordinator` keeps it level as the device rotates.
 - **Photo capture.** The shutter button captures a HEVC photo (JPEG when HEVC isn't available) at the largest size the active format supports and saves it to Photos.
 - **Zoom slider.** Useful for watching a virtual device (Dual, Dual Wide, Triple) switch between its constituent cameras.
