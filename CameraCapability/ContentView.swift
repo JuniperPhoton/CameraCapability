@@ -32,14 +32,34 @@ struct ContentView: View {
                 .disabled(model.currentDevice == nil || !model.isCameraOpen)
                 .frame(maxHeight: .infinity, alignment: .bottom)
                 .padding(.bottom, 12)
+
+                CameraToggle(model: model)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(12)
             }
             .background(.black)
-            .containerRelativeFrame(.vertical) { height, _ in height * 0.55 }
+            .containerRelativeFrame(.vertical) { height, _ in height * 0.3 }
             .animation(.default, value: model.statusMessage)
 
             ControlPanel(model: model)
         }
         .task { await model.start() }
+    }
+}
+
+/// Overlaid on the preview. Off by default, since device info doesn't need a running session.
+private struct CameraToggle: View {
+    let model: CameraModel
+
+    var body: some View {
+        Toggle("Open camera", isOn: Binding(
+            get: { model.isCameraOpen },
+            set: { open in Task { await model.setCameraOpen(open) } }
+        ))
+        .labelsHidden()
+        .disabled(model.currentDevice == nil || model.isConfiguring)
+        .padding(6)
+        .background(.ultraThinMaterial, in: Capsule())
     }
 }
 
@@ -93,13 +113,6 @@ private struct CameraSelector: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Toggle("Open camera", isOn: Binding(
-                get: { model.isCameraOpen },
-                set: { open in Task { await model.setCameraOpen(open) } }
-            ))
-            .font(.subheadline.weight(.medium))
-            .disabled(model.currentDevice == nil || model.isConfiguring)
-
             Picker("Position", selection: Binding(get: { model.position }, set: { model.select(position: $0) })) {
                 ForEach(CameraPosition.allCases) { position in
                     Text(position.rawValue).tag(position)
